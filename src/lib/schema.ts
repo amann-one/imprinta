@@ -9,6 +9,7 @@ export const sites = sqliteTable("sites", {
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
   updatedAt: text("updated_at").notNull().$defaultFn(() => new Date().toISOString()),
   error: text("error"),
+  source: text("source"), // Quelle des Imports (z.B. Dateiname, Sheet-URL, Label)
 });
 
 export const impressum = sqliteTable("impressum", {

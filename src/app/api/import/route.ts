@@ -40,6 +40,11 @@ export async function POST(req: Request) {
   await ensureTables();
   const body = await req.json();
   let urls: string[] = [];
+  // Quelle für diesen Import (optional)
+  const importSource: string | null =
+    (typeof body.source === "string" && body.source.trim()) ||
+    (typeof body.quelle === "string" && body.quelle.trim()) ||
+    null;
 
   if (Array.isArray(body.urls)) {
     urls = body.urls;
@@ -218,15 +223,29 @@ export async function POST(req: Request) {
   const before = Number((beforeRes.rows[0] as any).c || 0);
 
   const errors: string[] = [];
+  // Effektive Quelle: explizit gesetzte oder Fallback für Sheet
+  const effectiveSource: string | null =
+    importSource ||
+    (typeof body.sheetUrl === "string" && body.sheetUrl.trim()
+      ? body.sheetUrl.trim().slice(0, 200)
+      : null) ||
+    (typeof body.fileName === "string" && body.fileName.trim() ? body.fileName.trim().slice(0, 200) : null);
 
   for (const u of unique) {
     const domain = extractDomain(u);
     const now = new Date().toISOString();
     try {
       await client.execute({
-        sql: `INSERT OR IGNORE INTO sites (url, original_url, domain, status, created_at, updated_at) VALUES (?, ?, ?, 'pending', ?, ?)`,
-        args: [u, u, domain, now, now],
+        sql: `INSERT OR IGNORE INTO sites (url, original_url, domain, status, created_at, updated_at, source) VALUES (?, ?, ?, 'pending', ?, ?, ?)`,
+        args: [u, u, domain, now, now, effectiveSource],
       });
+      // Falls URL bereits existierte und noch keine Quelle hat, nachträglich setzen
+      if (effectiveSource) {
+        await client.execute({
+          sql: `UPDATE sites SET source = ?, updated_at = ? WHERE url = ? AND (source IS NULL OR source = '')`,
+          args: [effectiveSource, now, u],
+        });
+      }
     } catch (e: any) {
       errors.push(`${u}: ${e.message}`);
     }

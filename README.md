@@ -10,15 +10,15 @@ Einfache Web-App: CSV oder Google Sheet mit Webadressen einlesen → in Turso sp
 - Cheerio für HTML-Parsing, Fetch für Crawl (ohne Playwright)
 
 ## Features
-- **CSV-Import**: Drag & Drop oder Datei wählen. Erste Spalte = URL, Header optional, `,` oder `;` als Trenner. Deduplizierung via `normalizeUrl`.
-- **Google-Sheet-Import**: Öffentlichen Freigabe-Link einfügen (`Jeder mit Link kann ansehen`). Wird serverseitig via `https://docs.google.com/spreadsheets/d/ID/export?format=csv&gid=0` geholt.
-- **Turso-Persistenz**: Tabelle `sites` + `impressum` (siehe `src/lib/schema.ts`). Auto-Migration beim ersten Request (`ensureTables`).
+- **CSV-Import**: Drag & Drop oder Datei wählen. Erste Spalte = URL, Header optional, `,` oder `;` als Trenner. Deduplizierung via `normalizeUrl`. Mit **Quelle**-Feld (z.B. „Kundenliste 2024“ – vorbelegt mit Dateiname, editierbar).
+- **Google-Sheet-Import**: Öffentlichen Freigabe-Link einfügen (`Jeder mit Link kann ansehen`). Wird serverseitig via `https://docs.google.com/spreadsheets/d/ID/export?format=csv&gid=0` geholt. Mit **Quelle**-Feld (z.B. „Kampagne Q1“ – fallback Link).
+- **Turso-Persistenz**: Tabelle `sites` + `impressum` (siehe `src/lib/schema.ts`). Auto-Migration beim ersten Request (`ensureTables`), inkl. `source` (Quelle) Spalte + `PATCH /api/urls` zum nachträglichen Editieren.
 - **Impressum-Finder** (`src/lib/impressum.ts: findAndParseImpressum`):
   - Homepage fetch → Links mit `/impressum|imprint/i` suchen, Score nach Linktext + href + Footer/Header-Lage
   - Fallback: gängige Pfade `/impressum`, `/impressum.html`, `/imprint`, `/legal`, …
   - Seite fetchen → `extractMainText` (main/article/#content → body) → Heuristiken für E-Mail, Telefon, USt-ID (`DE\d{9}`), Handelsregister (HRB/HRA + Amtsgericht), Geschäftsführer, Adresse (PLZ-Ort)
   - Speichert `raw_text`, `raw_html` + strukturierte Felder
-- **UI** (`src/app/page.tsx`): Filter, Checkbox-Auswahl, „Alle Pending scrapen“ oder „Auswahl scrapen“, Detail-Modal, Löschen, Pagination 25/50/100.
+- **UI** (`src/app/page.tsx`): Filter (inkl. Quelle), Checkbox-Auswahl, „Alle Pending scrapen“ oder „Auswahl scrapen“, Detail-Modal (Quelle editierbar), Inline-Edit der Quelle in der Tabelle, Löschen, Pagination 25/50/100.
 
 ## Setup
 
@@ -41,9 +41,10 @@ npm run build  # Prüfen
 ```
 
 ## API
-- `GET /api/urls` – alle Sites + left joined Impressum
+- `GET /api/urls` – alle Sites + left joined Impressum (inkl. `source`)
 - `DELETE /api/urls?id=1` oder `?all=true`
-- `POST /api/import` – Body `{ urls: string[] }` oder `{ text: string }` oder `{ sheetUrl: string }`
+- `PATCH /api/urls` – Body `{ id: number, source: string }` zum Ändern der Quelle
+- `POST /api/import` – Body `{ urls: string[] , source?: string }` oder `{ text: string }` oder `{ sheetUrl: string, source?: string , fileName?: string }` (Quelle wird in `sites.source` gespeichert, fallback Dateiname/Link)
 - `POST /api/scrape` – Body `{ ids?: number[], limit?: number, force?: boolean }` – scraped max 50, default 20 pending
 
 ## Bekannte Limits

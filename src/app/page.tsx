@@ -8,6 +8,7 @@ type Row = {
   domain: string | null;
   status: string;
   error: string | null;
+  source: string | null;
   impressum_url: string | null;
   raw_text: string | null;
   company_name: string | null;
@@ -33,6 +34,11 @@ export default function Home() {
   const [msg, setMsg] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<25 | 50 | 100>(25);
+  const [csvSource, setCsvSource] = useState("");
+  const [sheetSource, setSheetSource] = useState("");
+  const [editingSourceId, setEditingSourceId] = useState<number | null>(null);
+  const [editingSourceVal, setEditingSourceVal] = useState("");
+  const [detailSourceEdit, setDetailSourceEdit] = useState<string>("");
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -68,13 +74,18 @@ export default function Home() {
       return v;
     });
     setImportLoading(true);
+    const source = csvSource.trim() || file.name.replace(/\.csv$/i, "");
     const res = await fetch("/api/import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ urls }),
+      body: JSON.stringify({ urls, source, fileName: file.name }),
     });
     const j = await res.json();
-    setMsg(j.error ? `Fehler: ${j.error}` : `${j.attempted} URLs verarbeitet, Gesamt: ${j.total}`);
+    setMsg(
+      j.error
+        ? `Fehler: ${j.error}`
+        : `${j.attempted} URLs verarbeitet (Quelle: ${source || "—"}), Gesamt: ${j.total} · ${j.inserted} neu`
+    );
     setImportLoading(false);
     fetchRows();
   };
@@ -82,13 +93,18 @@ export default function Home() {
   const handleSheet = async () => {
     if (!sheetUrl.trim()) return;
     setImportLoading(true);
+    const source = sheetSource.trim() || sheetUrl.trim();
     const res = await fetch("/api/import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sheetUrl }),
+      body: JSON.stringify({ sheetUrl, source }),
     });
     const j = await res.json();
-    setMsg(j.error ? `Fehler: ${j.error}` : `${j.attempted} URLs aus Sheet importiert, Gesamt: ${j.total}`);
+    setMsg(
+      j.error
+        ? `Fehler: ${j.error}`
+        : `${j.attempted} URLs aus Sheet importiert (Quelle: ${source.slice(0, 40)}), Gesamt: ${j.total} · ${j.inserted} neu`
+    );
     setImportLoading(false);
     fetchRows();
   };
@@ -114,6 +130,18 @@ export default function Home() {
     setSelected(n);
   };
 
+  const updateSource = async (id: number, source: string) => {
+    const res = await fetch("/api/urls", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, source }),
+    });
+    if (res.ok) {
+      setRows((prev) => prev.map((r) => (r.id === id ? { ...r, source: source || null } : r)));
+      setDetail((d) => (d && d.id === id ? { ...d, source: source || null } : d));
+    }
+  };
+
   const filtered = rows.filter((r) => {
     if (!filter) return true;
     const f = filter.toLowerCase();
@@ -121,7 +149,8 @@ export default function Home() {
       r.url.toLowerCase().includes(f) ||
       (r.company_name && r.company_name.toLowerCase().includes(f)) ||
       (r.domain && r.domain.toLowerCase().includes(f)) ||
-      r.status.toLowerCase().includes(f)
+      r.status.toLowerCase().includes(f) ||
+      (r.source && r.source.toLowerCase().includes(f))
     );
   });
 
@@ -139,6 +168,11 @@ export default function Home() {
   useEffect(() => {
     if (page !== safePage) setPage(safePage);
   }, [safePage, page]);
+
+  useEffect(() => {
+    if (detail) setDetailSourceEdit(detail.source || "");
+    else setDetailSourceEdit("");
+  }, [detail]);
 
   const allSelected = paginated.length > 0 && paginated.every((r) => selected.has(r.id));
   const someSelected = paginated.some((r) => selected.has(r.id));
@@ -178,6 +212,16 @@ export default function Home() {
           <div className="rounded-2xl border bg-white p-5 space-y-4">
             <h2 className="font-medium">CSV importieren</h2>
             <p className="text-sm text-zinc-500">1 Spalte mit URLs (Header optional). Drag & Drop oder Datei wählen.</p>
+            <div>
+              <label className="text-xs font-medium text-zinc-600">Quelle (optional)</label>
+              <input
+                value={csvSource}
+                onChange={(e) => setCsvSource(e.target.value)}
+                placeholder="z.B. Kundenliste 2024, Lieferanten-CSV"
+                className="mt-1 w-full rounded-full border px-4 py-2 text-sm"
+              />
+              <p className="text-[11px] text-zinc-400 mt-1">Wird für alle Zeilen dieses Imports gespeichert. Leer = Dateiname.</p>
+            </div>
             <label className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed bg-zinc-50 p-6 cursor-pointer hover:bg-zinc-100">
               <span className="text-sm font-medium">CSV-Datei ablegen</span>
               <span className="text-xs text-zinc-500">.csv</span>
@@ -198,6 +242,16 @@ export default function Home() {
           <div className="rounded-2xl border bg-white p-5 space-y-4">
             <h2 className="font-medium">Google Sheet importieren</h2>
             <p className="text-sm text-zinc-500">Öffentlich freigegebenen Link einfügen (erste Spalte = URL).</p>
+            <div>
+              <label className="text-xs font-medium text-zinc-600">Quelle (optional)</label>
+              <input
+                value={sheetSource}
+                onChange={(e) => setSheetSource(e.target.value)}
+                placeholder="z.B. Kampagne Q1, Recherche-Sheet"
+                className="mt-1 w-full rounded-full border px-4 py-2 text-sm"
+              />
+              <p className="text-[11px] text-zinc-400 mt-1">Leer = Link wird als Quelle gespeichert.</p>
+            </div>
             <div className="flex gap-2">
               <input
                 value={sheetUrl}
@@ -234,7 +288,7 @@ export default function Home() {
           <input
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filtern (Domain, Firma, Status)…"
+            placeholder="Filtern (Domain, Firma, Quelle, Status)…"
             className="rounded-full border bg-white px-4 py-2 text-sm w-64"
           />
           <div className="ml-auto flex gap-2">
@@ -281,6 +335,7 @@ export default function Home() {
                     />
                   </th>
                   <th className="p-3 text-left font-medium">URL / Domain</th>
+                  <th className="p-3 text-left font-medium">Quelle</th>
                   <th className="p-3 text-left font-medium">Status</th>
                   <th className="p-3 text-left font-medium">Firma</th>
                   <th className="p-3 text-left font-medium">Kontakt</th>
@@ -291,7 +346,7 @@ export default function Home() {
               <tbody className="divide-y">
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-zinc-400">
+                    <td colSpan={8} className="p-8 text-center text-zinc-400">
                       Keine URLs vorhanden. Importiere eine CSV oder ein Google Sheet.
                     </td>
                   </tr>
@@ -306,6 +361,57 @@ export default function Home() {
                         {r.url}
                       </a>
                       <span className="text-xs text-zinc-400">{r.domain}</span>
+                    </td>
+                    <td className="p-3">
+                      {editingSourceId === r.id ? (
+                        <div className="flex gap-1 items-center">
+                          <input
+                            value={editingSourceVal}
+                            onChange={(e) => setEditingSourceVal(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                updateSource(r.id, editingSourceVal);
+                                setEditingSourceId(null);
+                              }
+                              if (e.key === "Escape") setEditingSourceId(null);
+                            }}
+                            placeholder="Quelle"
+                            className="w-32 rounded-full border px-2 py-1 text-xs"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => {
+                              updateSource(r.id, editingSourceVal);
+                              setEditingSourceId(null);
+                            }}
+                            className="rounded-full bg-zinc-900 text-white px-2 py-1 text-[11px]"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={() => setEditingSourceId(null)}
+                            className="rounded-full border px-2 py-1 text-[11px]"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 group">
+                          <span className="block max-w-[140px] truncate text-xs" title={r.source || ""}>
+                            {r.source || <span className="text-zinc-400">—</span>}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setEditingSourceId(r.id);
+                              setEditingSourceVal(r.source || "");
+                            }}
+                            className="opacity-0 group-hover:opacity-100 rounded-full border px-1.5 py-0.5 text-[10px] hover:bg-zinc-50"
+                            title="Quelle bearbeiten"
+                          >
+                            ✎
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className="p-3">
                       <span
@@ -478,6 +584,26 @@ export default function Home() {
               <div>
                 <dt className="text-zinc-500">Status</dt>
                 <dd>{detail.status}</dd>
+              </div>
+              <div>
+                <dt className="text-zinc-500">Quelle</dt>
+                <dd className="flex gap-2 items-center">
+                  <input
+                    value={detailSourceEdit}
+                    onChange={(e) => setDetailSourceEdit(e.target.value)}
+                    placeholder="Quelle, z.B. Kundenliste"
+                    className="flex-1 rounded-full border px-3 py-1 text-sm"
+                  />
+                  <button
+                    onClick={async () => {
+                      await updateSource(detail.id, detailSourceEdit);
+                      setDetail((d) => (d ? { ...d, source: detailSourceEdit || null } : d));
+                    }}
+                    className="rounded-full bg-zinc-900 text-white px-3 py-1 text-xs"
+                  >
+                    Speichern
+                  </button>
+                </dd>
               </div>
               <div>
                 <dt className="text-zinc-500">Impressum-URL</dt>
