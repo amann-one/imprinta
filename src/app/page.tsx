@@ -183,6 +183,7 @@ export default function Home() {
 
   const startEditingDetail = (row: Row) => {
     setEditForm({
+      url: row.url || "",
       source: row.source || "",
       impressum_url: row.impressum_url || "",
       company_name: row.company_name || "",
@@ -207,6 +208,8 @@ export default function Home() {
     if (!detail) return;
     setSavingDetail(true);
     const payload: any = { id: detail.id };
+    // URL separat (wird normalisiert, Domain neu berechnet)
+    if (editForm.url !== undefined) payload.url = editForm.url;
     // Quelle separat
     if (editForm.source !== undefined) payload.source = editForm.source;
     // Impressum-Felder – mappe Row-Felder zu API-Feldern (snake/camel beide ok)
@@ -824,6 +827,11 @@ export default function Home() {
               </dl>
             ) : (
               <div className="grid grid-cols-2 gap-3 text-sm">
+                <label className="col-span-2">
+                  <span className="text-xs text-zinc-500">URL (ursprüngliche Webadresse) *</span>
+                  <input value={editForm.url || ""} onChange={(e) => setEditForm((p) => ({ ...p, url: e.target.value }))} placeholder="https://beispiel.de" className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                  <span className="text-[11px] text-zinc-400">Wird normalisiert, Domain neu berechnet. Duplikate werden abgelehnt.</span>
+                </label>
                 <label className="col-span-2">
                   <span className="text-xs text-zinc-500">Quelle</span>
                   <input value={editForm.source || ""} onChange={(e) => setEditForm((p) => ({ ...p, source: e.target.value }))} placeholder="Quelle" className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />

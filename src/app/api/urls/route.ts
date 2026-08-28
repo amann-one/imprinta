@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { client } from "@/lib/db";
 import { ensureTables } from "@/lib/migrate";
+import { normalizeUrlExport } from "@/lib/impressum";
 
 export async function GET() {
   await ensureTables();
@@ -37,6 +38,28 @@ export async function PATCH(req: Request) {
   if (!id) return NextResponse.json({ error: "id erforderlich" }, { status: 400 });
   const now = new Date().toISOString();
 
+  // 0) URL (sites.url) – falls geändert
+  let urlChanged = false;
+  if ("url" in body) {
+    const rawUrl = typeof body.url === "string" ? body.url.trim() : "";
+    if (!rawUrl) return NextResponse.json({ error: "URL darf nicht leer sein" }, { status: 400 });
+    const normalized = normalizeUrlExport(rawUrl);
+    try {
+      const u = new URL(normalized);
+      if (!u.hostname.includes(".")) throw new Error();
+    } catch {
+      return NextResponse.json({ error: "Ungültige URL" }, { status: 400 });
+    }
+    const dup = await client.execute({ sql: `SELECT id FROM sites WHERE url = ? AND id != ?`, args: [normalized, String(id)] });
+    if (dup.rows.length > 0) return NextResponse.json({ error: "URL existiert bereits für einen anderen Eintrag" }, { status: 409 });
+    const domain = (() => { try { return new URL(normalized).hostname; } catch { return null; } })();
+    await client.execute({
+      sql: `UPDATE sites SET url = ?, original_url = ?, domain = ?, status = 'pending', error = NULL, updated_at = ? WHERE id = ?`,
+      args: [normalized, normalized, domain, now, String(id)],
+    });
+    urlChanged = true;
+  }
+
   // Helper to pick field (camelCase or snake_case)
   const pick = (camel: string, snake: string) => {
     const v = body[camel] ?? body[snake];
@@ -54,7 +77,17 @@ export async function PATCH(req: Request) {
       sql: `UPDATE sites SET source = ?, updated_at = ? WHERE id = ?`,
       args: [srcVal, now, String(id)],
     });
-    // Falls nur source geschickt wurde, früh zurück
+    // Falls nur source (und ggf. url) geschickt wurde, früh zurück wenn keine Impressum-Felder
+    const hasImpressumKeys = [
+      "impressum_url","impressumUrl","company_name","companyName","legal_form","legalForm",
+      "address","zip","city","country","managing_directors","managingDirectors",
+      "register_court","registerCourt","register_number","registerNumber","ust_id","ustId",
+      "email","phone","fax","raw_text","rawText","raw_html","rawHtml"
+    ].some((k) => k in body);
+    if (!hasImpressumKeys && !urlChanged) return NextResponse.json({ ok: true });
+    if (!hasImpressumKeys && urlChanged) return NextResponse.json({ ok: true });
+  } else if (urlChanged) {
+    // Nur URL geändert, keine weiteren Felder?
     const hasImpressumKeys = [
       "impressum_url","impressumUrl","company_name","companyName","legal_form","legalForm",
       "address","zip","city","country","managing_directors","managingDirectors",
