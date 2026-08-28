@@ -137,6 +137,38 @@ export default function Home() {
     setSelected(n);
   };
 
+  const deleteOne = async (id: number) => {
+    if (!confirm("Diesen Eintrag wirklich löschen? URL und Impressum-Daten werden entfernt.")) return;
+    const res = await fetch(`/api/urls?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setRows((prev) => prev.filter((r) => r.id !== id));
+      setSelected((prev) => {
+        const n = new Set(prev);
+        n.delete(id);
+        return n;
+      });
+      if (detail?.id === id) setDetail(null);
+      setMsg("Eintrag gelöscht");
+    } else {
+      const j = await res.json().catch(() => ({}));
+      setMsg(`Fehler beim Löschen: ${j.error || res.statusText}`);
+    }
+  };
+
+  const deleteSelected = async () => {
+    if (selected.size === 0) return;
+    if (!confirm(`${selected.size} Einträge wirklich löschen?`)) return;
+    let ok = 0;
+    for (const id of Array.from(selected)) {
+      const res = await fetch(`/api/urls?id=${id}`, { method: "DELETE" });
+      if (res.ok) ok++;
+    }
+    setRows((prev) => prev.filter((r) => !selected.has(r.id)));
+    setSelected(new Set());
+    setMsg(`${ok} Einträge gelöscht`);
+    await fetchRows();
+  };
+
   const updateSource = async (id: number, source: string) => {
     const res = await fetch("/api/urls", {
       method: "PATCH",
@@ -389,22 +421,29 @@ export default function Home() {
             >
               Auswahl scrapen ({selected.size})
             </button>
+            <button
+              onClick={deleteSelected}
+              disabled={selected.size === 0 || loading}
+              className="rounded-full border border-red-200 text-red-600 bg-white px-5 py-2 text-sm disabled:opacity-50 hover:bg-red-50"
+            >
+              Auswahl löschen ({selected.size})
+            </button>
           </div>
         </div>
 
         {/* Table */}
         <div className="rounded-2xl border bg-white overflow-hidden flex flex-col min-w-0 max-w-full">
           <div className="overflow-x-auto w-full max-w-full overscroll-x-contain">
-            <table className="w-full text-sm min-w-[760px]">
+            <table className="w-full text-sm min-w-[820px]">
               <colgroup>
                 <col style={{width: '36px'}} />
-                <col style={{width: '20%'}} />
-                <col style={{width: '13%'}} />
-                <col style={{width: '11%'}} />
-                <col style={{width: '15%'}} />
+                <col style={{width: '18%'}} />
                 <col style={{width: '12%'}} />
-                <col style={{width: '15%'}} />
-                <col style={{width: '96px'}} />
+                <col style={{width: '10%'}} />
+                <col style={{width: '14%'}} />
+                <col style={{width: '11%'}} />
+                <col style={{width: '14%'}} />
+                <col style={{width: '140px'}} />
               </colgroup>
               <thead className="bg-zinc-50 text-zinc-500">
                 <tr>
@@ -542,14 +581,22 @@ export default function Home() {
                     </td>
                     <td className="p-3 overflow-hidden">
                       <div className="flex gap-1 flex-nowrap min-w-0">
-                      <button onClick={() => setDetail(r)} className="rounded-full border px-3 py-1 text-xs hover:bg-zinc-50">
+                      <button onClick={() => setDetail(r)} className="rounded-full border px-2.5 py-1 text-xs hover:bg-zinc-50" title="Details ansehen/bearbeiten">
                         Detail
                       </button>
                       <button
                         onClick={() => scrape([r.id])}
-                        className="rounded-full bg-zinc-900 text-white px-3 py-1 text-xs"
+                        className="rounded-full bg-zinc-900 text-white px-2.5 py-1 text-xs"
+                        title="Erneut scrapen"
                       >
                         Scan
+                      </button>
+                      <button
+                        onClick={() => deleteOne(r.id)}
+                        className="rounded-full border border-red-200 text-red-600 px-2.5 py-1 text-xs hover:bg-red-50"
+                        title="Eintrag löschen"
+                      >
+                        Löschen
                       </button>
                       </div>
                     </td>
@@ -680,6 +727,12 @@ export default function Home() {
                       className="rounded-full bg-zinc-900 text-white px-4 py-1.5 text-sm"
                     >
                       Bearbeiten
+                    </button>
+                    <button
+                      onClick={() => deleteOne(detail.id)}
+                      className="rounded-full border border-red-200 text-red-600 px-4 py-1.5 text-sm hover:bg-red-50"
+                    >
+                      Löschen
                     </button>
                     <button onClick={() => setDetail(null)} className="rounded-full border px-3 py-1.5 text-sm">
                       Schließen
