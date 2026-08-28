@@ -1,5 +1,7 @@
 # Imprinta – URL → Impressum Importer
 
+Website-URLs mit Impressum-Daten anreichern via Scraper
+
 Einfache Web-App: CSV oder Google Sheet mit Webadressen einlesen → in Turso speichern → Impressum finden und strukturierte Daten extrahieren.
 
 ## Stack
@@ -16,7 +18,7 @@ Einfache Web-App: CSV oder Google Sheet mit Webadressen einlesen → in Turso sp
   - Fallback: gängige Pfade `/impressum`, `/impressum.html`, `/imprint`, `/legal`, …
   - Seite fetchen → `extractMainText` (main/article/#content → body) → Heuristiken für E-Mail, Telefon, USt-ID (`DE\d{9}`), Handelsregister (HRB/HRA + Amtsgericht), Geschäftsführer, Adresse (PLZ-Ort)
   - Speichert `raw_text`, `raw_html` + strukturierte Felder
-- **UI** (`src/app/page.tsx`): Filter, Checkbox-Auswahl, „Alle Pending scrapen“ oder „Auswahl scrapen“, Detail-Modal, Löschen.
+- **UI** (`src/app/page.tsx`): Filter, Checkbox-Auswahl, „Alle Pending scrapen“ oder „Auswahl scrapen“, Detail-Modal, Löschen, Pagination 25/50/100.
 
 ## Setup
 
