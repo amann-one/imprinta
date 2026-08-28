@@ -11,12 +11,16 @@ type Row = {
   source: string | null;
   impressum_url: string | null;
   raw_text: string | null;
+  raw_html: string | null;
   company_name: string | null;
+  legal_form: string | null;
   address: string | null;
   zip: string | null;
   city: string | null;
+  country: string | null;
   email: string | null;
   phone: string | null;
+  fax: string | null;
   ust_id: string | null;
   register_number: string | null;
   register_court: string | null;
@@ -39,6 +43,9 @@ export default function Home() {
   const [editingSourceId, setEditingSourceId] = useState<number | null>(null);
   const [editingSourceVal, setEditingSourceVal] = useState("");
   const [detailSourceEdit, setDetailSourceEdit] = useState<string>("");
+  const [isEditingDetail, setIsEditingDetail] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Row>>({});
+  const [savingDetail, setSavingDetail] = useState(false);
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -142,6 +149,75 @@ export default function Home() {
     }
   };
 
+  const startEditingDetail = (row: Row) => {
+    setEditForm({
+      source: row.source || "",
+      impressum_url: row.impressum_url || "",
+      company_name: row.company_name || "",
+      legal_form: row.legal_form || "",
+      address: row.address || "",
+      zip: row.zip || "",
+      city: row.city || "",
+      country: row.country || "",
+      managing_directors: row.managing_directors || "",
+      register_court: row.register_court || "",
+      register_number: row.register_number || "",
+      ust_id: row.ust_id || "",
+      email: row.email || "",
+      phone: row.phone || "",
+      fax: row.fax || "",
+      raw_text: row.raw_text || "",
+    });
+    setIsEditingDetail(true);
+  };
+
+  const saveDetail = async () => {
+    if (!detail) return;
+    setSavingDetail(true);
+    const payload: any = { id: detail.id };
+    // Quelle separat
+    if (editForm.source !== undefined) payload.source = editForm.source;
+    // Impressum-Felder – mappe Row-Felder zu API-Feldern (snake/camel beide ok)
+    const map: Record<string, keyof Row> = {
+      impressum_url: "impressum_url",
+      company_name: "company_name",
+      legal_form: "legal_form",
+      address: "address",
+      zip: "zip",
+      city: "city",
+      country: "country",
+      managing_directors: "managing_directors",
+      register_court: "register_court",
+      register_number: "register_number",
+      ust_id: "ust_id",
+      email: "email",
+      phone: "phone",
+      fax: "fax",
+      raw_text: "raw_text",
+    };
+    for (const [apiKey, rowKey] of Object.entries(map)) {
+      const v = (editForm as any)[rowKey];
+      if (v !== undefined) payload[apiKey] = v;
+    }
+    const res = await fetch("/api/urls", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      // Lokal updaten + neu laden
+      setRows((prev) => prev.map((r) => (r.id === detail.id ? { ...r, ...editForm } as Row : r)));
+      setDetail((d) => (d ? ({ ...d, ...editForm } as Row) : d));
+      setIsEditingDetail(false);
+      setMsg("Details gespeichert");
+      await fetchRows();
+    } else {
+      const j = await res.json().catch(() => ({}));
+      setMsg(`Fehler beim Speichern: ${j.error || res.statusText}`);
+    }
+    setSavingDetail(false);
+  };
+
   const filtered = rows.filter((r) => {
     if (!filter) return true;
     const f = filter.toLowerCase();
@@ -170,8 +246,15 @@ export default function Home() {
   }, [safePage, page]);
 
   useEffect(() => {
-    if (detail) setDetailSourceEdit(detail.source || "");
-    else setDetailSourceEdit("");
+    if (detail) {
+      setDetailSourceEdit(detail.source || "");
+      setIsEditingDetail(false);
+      setEditForm({});
+    } else {
+      setDetailSourceEdit("");
+      setIsEditingDetail(false);
+      setEditForm({});
+    }
   }, [detail]);
 
   const allSelected = paginated.length > 0 && paginated.every((r) => selected.has(r.id));
@@ -581,87 +664,184 @@ export default function Home() {
       {detail && (
         <div className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4" onClick={() => setDetail(null)}>
           <div onClick={(e) => e.stopPropagation()} className="max-w-2xl w-full rounded-2xl bg-white p-6 space-y-4 max-h-[85vh] overflow-auto">
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-semibold">{detail.company_name || detail.url}</h3>
-                <a href={detail.url} target="_blank" className="text-sm text-blue-600 hover:underline">
+            <div className="flex justify-between items-start gap-4">
+              <div className="min-w-0">
+                <h3 className="font-semibold truncate">{isEditingDetail ? (editForm.company_name || detail.url) : (detail.company_name || detail.url)}</h3>
+                <a href={detail.url} target="_blank" className="text-sm text-blue-600 hover:underline break-all">
                   {detail.url}
                 </a>
+                <div className="text-xs text-zinc-500 mt-1">Status: {detail.status} {detail.error ? `· ${detail.error}` : ""}</div>
               </div>
-              <button onClick={() => setDetail(null)} className="rounded-full border px-3 py-1 text-sm">
-                Schließen
-              </button>
+              <div className="flex gap-2 shrink-0">
+                {!isEditingDetail ? (
+                  <>
+                    <button
+                      onClick={() => startEditingDetail(detail)}
+                      className="rounded-full bg-zinc-900 text-white px-4 py-1.5 text-sm"
+                    >
+                      Bearbeiten
+                    </button>
+                    <button onClick={() => setDetail(null)} className="rounded-full border px-3 py-1.5 text-sm">
+                      Schließen
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setIsEditingDetail(false)}
+                      className="rounded-full border px-4 py-1.5 text-sm"
+                      disabled={savingDetail}
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      onClick={saveDetail}
+                      disabled={savingDetail}
+                      className="rounded-full bg-zinc-900 text-white px-4 py-1.5 text-sm disabled:opacity-50"
+                    >
+                      {savingDetail ? "Speichert…" : "Speichern"}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-            <dl className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <dt className="text-zinc-500">Status</dt>
-                <dd>{detail.status}</dd>
+
+            {!isEditingDetail ? (
+              <dl className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <dt className="text-zinc-500">Quelle</dt>
+                  <dd className="break-words">{detail.source || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">Impressum-URL</dt>
+                  <dd className="break-all truncate" title={detail.impressum_url || ""}>{detail.impressum_url || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">Firma</dt>
+                  <dd className="break-words">{detail.company_name || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">Rechtsform</dt>
+                  <dd>{detail.legal_form || "—"}</dd>
+                </div>
+                <div className="col-span-2">
+                  <dt className="text-zinc-500">Adresse</dt>
+                  <dd className="break-words">{detail.address || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">PLZ</dt>
+                  <dd>{detail.zip || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">Ort</dt>
+                  <dd>{detail.city || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">Land</dt>
+                  <dd>{detail.country || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">Geschäftsführer</dt>
+                  <dd className="break-words">{detail.managing_directors || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">Registergericht</dt>
+                  <dd className="break-words">{detail.register_court || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">Registernummer</dt>
+                  <dd>{detail.register_number || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">USt-ID</dt>
+                  <dd className="break-all">{detail.ust_id || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">E-Mail</dt>
+                  <dd className="break-all">{detail.email || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">Telefon</dt>
+                  <dd>{detail.phone || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-zinc-500">Fax</dt>
+                  <dd>{detail.fax || "—"}</dd>
+                </div>
+              </dl>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <label className="col-span-2">
+                  <span className="text-xs text-zinc-500">Quelle</span>
+                  <input value={editForm.source || ""} onChange={(e) => setEditForm((p) => ({ ...p, source: e.target.value }))} placeholder="Quelle" className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label className="col-span-2">
+                  <span className="text-xs text-zinc-500">Impressum-URL</span>
+                  <input value={editForm.impressum_url || ""} onChange={(e) => setEditForm((p) => ({ ...p, impressum_url: e.target.value }))} placeholder="https://..." className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label>
+                  <span className="text-xs text-zinc-500">Firma</span>
+                  <input value={editForm.company_name || ""} onChange={(e) => setEditForm((p) => ({ ...p, company_name: e.target.value }))} className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label>
+                  <span className="text-xs text-zinc-500">Rechtsform</span>
+                  <input value={editForm.legal_form || ""} onChange={(e) => setEditForm((p) => ({ ...p, legal_form: e.target.value }))} placeholder="GmbH, UG..." className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label className="col-span-2">
+                  <span className="text-xs text-zinc-500">Adresse</span>
+                  <input value={editForm.address || ""} onChange={(e) => setEditForm((p) => ({ ...p, address: e.target.value }))} placeholder="Straße, Nr." className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label>
+                  <span className="text-xs text-zinc-500">PLZ</span>
+                  <input value={editForm.zip || ""} onChange={(e) => setEditForm((p) => ({ ...p, zip: e.target.value }))} className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label>
+                  <span className="text-xs text-zinc-500">Ort</span>
+                  <input value={editForm.city || ""} onChange={(e) => setEditForm((p) => ({ ...p, city: e.target.value }))} className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label>
+                  <span className="text-xs text-zinc-500">Land</span>
+                  <input value={editForm.country || ""} onChange={(e) => setEditForm((p) => ({ ...p, country: e.target.value }))} placeholder="DE" className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label>
+                  <span className="text-xs text-zinc-500">Geschäftsführer</span>
+                  <input value={editForm.managing_directors || ""} onChange={(e) => setEditForm((p) => ({ ...p, managing_directors: e.target.value }))} className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label>
+                  <span className="text-xs text-zinc-500">Registergericht</span>
+                  <input value={editForm.register_court || ""} onChange={(e) => setEditForm((p) => ({ ...p, register_court: e.target.value }))} className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label>
+                  <span className="text-xs text-zinc-500">Registernummer</span>
+                  <input value={editForm.register_number || ""} onChange={(e) => setEditForm((p) => ({ ...p, register_number: e.target.value }))} placeholder="HRB 1234" className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label>
+                  <span className="text-xs text-zinc-500">USt-ID</span>
+                  <input value={editForm.ust_id || ""} onChange={(e) => setEditForm((p) => ({ ...p, ust_id: e.target.value }))} placeholder="DE123456789" className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label>
+                  <span className="text-xs text-zinc-500">E-Mail</span>
+                  <input value={editForm.email || ""} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label>
+                  <span className="text-xs text-zinc-500">Telefon</span>
+                  <input value={editForm.phone || ""} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label>
+                  <span className="text-xs text-zinc-500">Fax</span>
+                  <input value={editForm.fax || ""} onChange={(e) => setEditForm((p) => ({ ...p, fax: e.target.value }))} className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                </label>
+                <label className="col-span-2">
+                  <span className="text-xs text-zinc-500">Rohtext (editierbar)</span>
+                  <textarea value={editForm.raw_text || ""} onChange={(e) => setEditForm((p) => ({ ...p, raw_text: e.target.value }))} rows={4} className="mt-1 w-full rounded-2xl border px-3 py-2 text-sm" placeholder="Impressum-Rohtext" />
+                </label>
               </div>
-              <div>
-                <dt className="text-zinc-500">Quelle</dt>
-                <dd className="flex gap-2 items-center">
-                  <input
-                    value={detailSourceEdit}
-                    onChange={(e) => setDetailSourceEdit(e.target.value)}
-                    placeholder="Quelle, z.B. Kundenliste"
-                    className="flex-1 rounded-full border px-3 py-1 text-sm"
-                  />
-                  <button
-                    onClick={async () => {
-                      await updateSource(detail.id, detailSourceEdit);
-                      setDetail((d) => (d ? { ...d, source: detailSourceEdit || null } : d));
-                    }}
-                    className="rounded-full bg-zinc-900 text-white px-3 py-1 text-xs"
-                  >
-                    Speichern
-                  </button>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">Impressum-URL</dt>
-                <dd className="truncate">{detail.impressum_url || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">Firma</dt>
-                <dd>{detail.company_name || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">Adresse</dt>
-                <dd>{detail.address || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">PLZ / Ort</dt>
-                <dd>
-                  {detail.zip || ""} {detail.city || "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">Geschäftsführer</dt>
-                <dd>{detail.managing_directors || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">Register</dt>
-                <dd>
-                  {detail.register_court || ""} {detail.register_number || "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">USt-ID</dt>
-                <dd>{detail.ust_id || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">E-Mail</dt>
-                <dd>{detail.email || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-zinc-500">Telefon</dt>
-                <dd>{detail.phone || "—"}</dd>
-              </div>
-            </dl>
+            )}
+
             <div>
-              <h4 className="text-sm font-medium">Rohtext (Auszug)</h4>
-              <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-zinc-50 p-3 text-xs whitespace-pre-wrap">
-                {detail.raw_text ? detail.raw_text.slice(0, 4000) : "Kein Text vorhanden"}
+              <h4 className="text-sm font-medium">Rohtext (Auszug) {isEditingDetail && <span className="text-xs text-zinc-400">– oben editierbar</span>}</h4>
+              <pre className="mt-2 max-h-64 overflow-auto rounded-xl bg-zinc-50 p-3 text-xs whitespace-pre-wrap break-words">
+                {isEditingDetail ? (editForm.raw_text || detail.raw_text || "Kein Text vorhanden").slice(0, 4000) : (detail.raw_text ? detail.raw_text.slice(0, 4000) : "Kein Text vorhanden")}
               </pre>
             </div>
           </div>
