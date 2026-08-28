@@ -437,12 +437,12 @@ export default function Home() {
         {/* Table */}
         <div className="rounded-2xl border bg-white overflow-hidden flex flex-col min-w-0 max-w-full">
           <div className="overflow-x-auto w-full max-w-full overscroll-x-contain">
-            <table className="w-full text-sm min-w-[760px]">
+            <table className="w-full text-sm min-w-[820px]">
               <colgroup>
                 <col style={{width: '36px'}} />
                 <col style={{width: '22%'}} />
-                <col style={{width: '11%'}} />
-                <col style={{width: '22%'}} />
+                <col style={{width: '150px'}} />
+                <col style={{width: '23%'}} />
                 <col style={{width: '12%'}} />
                 <col style={{width: '15%'}} />
                 <col style={{width: '140px'}} />
@@ -469,7 +469,7 @@ export default function Home() {
                     />
                   </th>
                   <th className="p-3 text-left font-medium">URL / Domain</th>
-                  <th className="p-3 text-left font-medium">Status</th>
+                  <th className="p-3 text-left font-medium" style={{width: '150px', minWidth: '150px', maxWidth: '150px'}}>Status</th>
                   <th className="p-3 text-left font-medium">Firma / Quelle</th>
                   <th className="p-3 text-left font-medium">Kontakt</th>
                   <th className="p-3 text-left font-medium">Impressum</th>
@@ -495,21 +495,33 @@ export default function Home() {
                       </a>
                       <span className="text-xs text-zinc-400 block truncate w-full" title={r.domain || ""}>{r.domain}</span>
                     </td>
-                    <td className="p-3 overflow-hidden min-w-0">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium max-w-full truncate ${
-                          r.status === "done"
-                            ? "bg-green-100 text-green-700"
-                            : r.status === "error"
-                            ? "bg-red-100 text-red-700"
-                            : r.status === "scraping"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-zinc-100 text-zinc-600"
-                        }`}
-                      >
-                        {r.status}
-                      </span>
-                      {r.error && <span className="block text-xs text-red-500 mt-1 w-full truncate" title={r.error || ""}>{r.error}</span>}
+                    <td className="p-3 overflow-visible" style={{width: '150px', minWidth: '150px', maxWidth: '150px'}}>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium truncate max-w-[110px] ${
+                            r.status === "done"
+                              ? "bg-green-100 text-green-700"
+                              : r.status === "error"
+                              ? "bg-red-100 text-red-700"
+                              : r.status === "scraping"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-zinc-100 text-zinc-600"
+                          }`}
+                        >
+                          {r.status}
+                        </span>
+                        {r.error && (
+                          <div className="relative group shrink-0">
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-red-600 text-[11px] font-bold cursor-help">!</span>
+                            <div className="pointer-events-none absolute left-1/2 top-full z-50 hidden -translate-x-1/2 group-hover:block pt-2">
+                              <div className="min-w-[220px] max-w-[320px] rounded-xl border bg-white p-3 shadow-lg">
+                                <div className="text-xs font-medium text-red-600 mb-1">Fehler</div>
+                                <div className="text-xs text-zinc-700 break-words whitespace-normal">{r.error}</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="p-3 overflow-hidden min-w-0">
                       <span className="block w-full truncate font-medium" title={r.company_name || ""}>{r.company_name || "—"}</span>
