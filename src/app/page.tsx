@@ -437,15 +437,14 @@ export default function Home() {
         {/* Table */}
         <div className="rounded-2xl border bg-white overflow-hidden flex flex-col min-w-0 max-w-full">
           <div className="overflow-x-auto w-full max-w-full overscroll-x-contain">
-            <table className="w-full text-sm min-w-[820px]">
+            <table className="w-full text-sm min-w-[760px]">
               <colgroup>
                 <col style={{width: '36px'}} />
-                <col style={{width: '18%'}} />
-                <col style={{width: '12%'}} />
-                <col style={{width: '10%'}} />
-                <col style={{width: '14%'}} />
+                <col style={{width: '22%'}} />
                 <col style={{width: '11%'}} />
-                <col style={{width: '14%'}} />
+                <col style={{width: '22%'}} />
+                <col style={{width: '12%'}} />
+                <col style={{width: '15%'}} />
                 <col style={{width: '140px'}} />
               </colgroup>
               <thead className="bg-zinc-50 text-zinc-500">
@@ -470,9 +469,8 @@ export default function Home() {
                     />
                   </th>
                   <th className="p-3 text-left font-medium">URL / Domain</th>
-                  <th className="p-3 text-left font-medium">Quelle</th>
                   <th className="p-3 text-left font-medium">Status</th>
-                  <th className="p-3 text-left font-medium">Firma</th>
+                  <th className="p-3 text-left font-medium">Firma / Quelle</th>
                   <th className="p-3 text-left font-medium">Kontakt</th>
                   <th className="p-3 text-left font-medium">Impressum</th>
                   <th className="p-3"></th>
@@ -481,7 +479,7 @@ export default function Home() {
               <tbody className="divide-y">
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-zinc-400">
+                    <td colSpan={7} className="p-8 text-center text-zinc-400">
                       Keine URLs vorhanden. Importiere eine CSV oder ein Google Sheet.
                     </td>
                   </tr>
@@ -498,8 +496,25 @@ export default function Home() {
                       <span className="text-xs text-zinc-400 block truncate w-full" title={r.domain || ""}>{r.domain}</span>
                     </td>
                     <td className="p-3 overflow-hidden min-w-0">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium max-w-full truncate ${
+                          r.status === "done"
+                            ? "bg-green-100 text-green-700"
+                            : r.status === "error"
+                            ? "bg-red-100 text-red-700"
+                            : r.status === "scraping"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-zinc-100 text-zinc-600"
+                        }`}
+                      >
+                        {r.status}
+                      </span>
+                      {r.error && <span className="block text-xs text-red-500 mt-1 w-full truncate" title={r.error || ""}>{r.error}</span>}
+                    </td>
+                    <td className="p-3 overflow-hidden min-w-0">
+                      <span className="block w-full truncate font-medium" title={r.company_name || ""}>{r.company_name || "—"}</span>
                       {editingSourceId === r.id ? (
-                        <div className="flex gap-1 items-center min-w-0">
+                        <div className="flex gap-1 items-center min-w-0 mt-1">
                           <input
                             value={editingSourceVal}
                             onChange={(e) => setEditingSourceVal(e.target.value)}
@@ -511,7 +526,7 @@ export default function Home() {
                               if (e.key === "Escape") setEditingSourceId(null);
                             }}
                             placeholder="Quelle"
-                            className="w-full min-w-0 max-w-[110px] rounded-full border px-2 py-1 text-xs"
+                            className="w-full min-w-0 max-w-[140px] rounded-full border px-2 py-1 text-xs"
                             autoFocus
                           />
                           <button
@@ -531,42 +546,23 @@ export default function Home() {
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1 group min-w-0 overflow-hidden">
-                          <span className="block w-full truncate text-xs min-w-0" title={r.source || ""}>
-                            {r.source || <span className="text-zinc-400">—</span>}
+                        <div className="flex items-center gap-1 group min-w-0 overflow-hidden mt-1">
+                          <span className="block w-full truncate text-xs text-zinc-500" title={r.source || ""}>
+                            {r.source ? `Quelle: ${r.source}` : <span className="text-zinc-400">—</span>}
                           </span>
                           <button
                             onClick={() => {
                               setEditingSourceId(r.id);
                               setEditingSourceVal(r.source || "");
                             }}
-                            className="opacity-0 group-hover:opacity-100 rounded-full border px-1.5 py-0.5 text-[10px] hover:bg-zinc-50"
+                            className="opacity-0 group-hover:opacity-100 rounded-full border px-1.5 py-0.5 text-[10px] hover:bg-zinc-50 shrink-0"
                             title="Quelle bearbeiten"
                           >
                             ✎
                           </button>
                         </div>
                       )}
-                    </td>
-                    <td className="p-3 overflow-hidden min-w-0">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium max-w-full truncate ${
-                          r.status === "done"
-                            ? "bg-green-100 text-green-700"
-                            : r.status === "error"
-                            ? "bg-red-100 text-red-700"
-                            : r.status === "scraping"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-zinc-100 text-zinc-600"
-                        }`}
-                      >
-                        {r.status}
-                      </span>
-                      {r.error && <span className="block text-xs text-red-500 mt-1 w-full truncate" title={r.error || ""}>{r.error}</span>}
-                    </td>
-                    <td className="p-3 overflow-hidden min-w-0">
-                      <span className="block w-full truncate" title={r.company_name || ""}>{r.company_name || "—"}</span>
-                      <span className="text-xs text-zinc-500 block w-full truncate" title={r.address ? `${r.zip || ""} ${r.city || ""}` : ""}>{r.address ? `${r.zip || ""} ${r.city || ""}` : ""}</span>
+                      <span className="text-xs text-zinc-500 block w-full truncate mt-1" title={r.address ? `${r.zip || ""} ${r.city || ""}` : ""}>{r.address ? `${r.zip || ""} ${r.city || ""}` : ""}</span>
                     </td>
                     <td className="p-3 text-xs overflow-hidden min-w-0">
                       <div className="truncate w-full" title={r.email || ""}>{r.email || "—"}</div>
