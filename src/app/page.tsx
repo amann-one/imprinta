@@ -310,9 +310,19 @@ export default function Home() {
         </div>
 
         {/* Table */}
-        <div className="rounded-2xl border bg-white overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+        <div className="rounded-2xl border bg-white overflow-hidden flex flex-col min-w-0 max-w-full">
+          <div className="overflow-x-auto w-full max-w-full overscroll-x-contain">
+            <table className="w-full text-sm min-w-[760px]">
+              <colgroup>
+                <col style={{width: '36px'}} />
+                <col style={{width: '20%'}} />
+                <col style={{width: '13%'}} />
+                <col style={{width: '11%'}} />
+                <col style={{width: '15%'}} />
+                <col style={{width: '12%'}} />
+                <col style={{width: '15%'}} />
+                <col style={{width: '96px'}} />
+              </colgroup>
               <thead className="bg-zinc-50 text-zinc-500">
                 <tr>
                   <th className="p-3 text-left">
@@ -353,18 +363,18 @@ export default function Home() {
                 )}
                 {paginated.map((r) => (
                   <tr key={r.id} className="hover:bg-zinc-50/60">
-                    <td className="p-3">
+                    <td className="p-3 overflow-hidden">
                       <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
                     </td>
-                    <td className="p-3">
-                      <a href={r.url} target="_blank" className="font-medium hover:underline block max-w-[260px] truncate">
+                    <td className="p-3 overflow-hidden min-w-0">
+                      <a href={r.url} target="_blank" className="font-medium hover:underline block w-full truncate" title={r.url}>
                         {r.url}
                       </a>
-                      <span className="text-xs text-zinc-400">{r.domain}</span>
+                      <span className="text-xs text-zinc-400 block truncate w-full" title={r.domain || ""}>{r.domain}</span>
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 overflow-hidden min-w-0">
                       {editingSourceId === r.id ? (
-                        <div className="flex gap-1 items-center">
+                        <div className="flex gap-1 items-center min-w-0">
                           <input
                             value={editingSourceVal}
                             onChange={(e) => setEditingSourceVal(e.target.value)}
@@ -376,7 +386,7 @@ export default function Home() {
                               if (e.key === "Escape") setEditingSourceId(null);
                             }}
                             placeholder="Quelle"
-                            className="w-32 rounded-full border px-2 py-1 text-xs"
+                            className="w-full min-w-0 max-w-[110px] rounded-full border px-2 py-1 text-xs"
                             autoFocus
                           />
                           <button
@@ -396,8 +406,8 @@ export default function Home() {
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-1 group">
-                          <span className="block max-w-[140px] truncate text-xs" title={r.source || ""}>
+                        <div className="flex items-center gap-1 group min-w-0 overflow-hidden">
+                          <span className="block w-full truncate text-xs min-w-0" title={r.source || ""}>
                             {r.source || <span className="text-zinc-400">—</span>}
                           </span>
                           <button
@@ -413,9 +423,9 @@ export default function Home() {
                         </div>
                       )}
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 overflow-hidden min-w-0">
                       <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium max-w-full truncate ${
                           r.status === "done"
                             ? "bg-green-100 text-green-700"
                             : r.status === "error"
@@ -427,27 +437,28 @@ export default function Home() {
                       >
                         {r.status}
                       </span>
-                      {r.error && <span className="block text-xs text-red-500 mt-1 max-w-[180px] truncate">{r.error}</span>}
+                      {r.error && <span className="block text-xs text-red-500 mt-1 w-full truncate" title={r.error || ""}>{r.error}</span>}
                     </td>
-                    <td className="p-3">
-                      <span className="block max-w-[180px] truncate">{r.company_name || "—"}</span>
-                      <span className="text-xs text-zinc-500">{r.address ? `${r.zip || ""} ${r.city || ""}` : ""}</span>
+                    <td className="p-3 overflow-hidden min-w-0">
+                      <span className="block w-full truncate" title={r.company_name || ""}>{r.company_name || "—"}</span>
+                      <span className="text-xs text-zinc-500 block w-full truncate" title={r.address ? `${r.zip || ""} ${r.city || ""}` : ""}>{r.address ? `${r.zip || ""} ${r.city || ""}` : ""}</span>
                     </td>
-                    <td className="p-3 text-xs">
-                      <div className="truncate max-w-[160px]">{r.email || "—"}</div>
-                      <div className="text-zinc-500">{r.phone || ""}</div>
+                    <td className="p-3 text-xs overflow-hidden min-w-0">
+                      <div className="truncate w-full" title={r.email || ""}>{r.email || "—"}</div>
+                      <div className="text-zinc-500 truncate w-full" title={r.phone || ""}>{r.phone || ""}</div>
                     </td>
-                    <td className="p-3">
+                    <td className="p-3 overflow-hidden min-w-0">
                       {r.impressum_url ? (
-                        <a href={r.impressum_url} target="_blank" className="text-xs text-blue-600 hover:underline block max-w-[160px] truncate">
+                        <a href={r.impressum_url} target="_blank" className="text-xs text-blue-600 hover:underline block w-full truncate" title={r.impressum_url}>
                           {r.impressum_url}
                         </a>
                       ) : (
                         <span className="text-xs text-zinc-400">—</span>
                       )}
-                      {r.ust_id && <div className="text-xs text-zinc-500">{r.ust_id}</div>}
+                      {r.ust_id && <div className="text-xs text-zinc-500 w-full truncate" title={r.ust_id}>{r.ust_id}</div>}
                     </td>
-                    <td className="p-3 flex gap-1">
+                    <td className="p-3 overflow-hidden">
+                      <div className="flex gap-1 flex-nowrap min-w-0">
                       <button onClick={() => setDetail(r)} className="rounded-full border px-3 py-1 text-xs hover:bg-zinc-50">
                         Detail
                       </button>
@@ -457,6 +468,7 @@ export default function Home() {
                       >
                         Scan
                       </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
