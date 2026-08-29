@@ -437,13 +437,13 @@ export default function Home() {
         {/* Table */}
         <div className="rounded-2xl border bg-white overflow-hidden flex flex-col min-w-0 max-w-full">
           <div className="overflow-x-auto w-full max-w-full overscroll-x-contain">
-            <table className="w-full text-sm min-w-[900px]">
+            <table className="w-full text-sm min-w-[820px]">
               <colgroup>
                 <col style={{width: '36px'}} />
                 <col style={{width: '150px'}} />
-                <col style={{width: '150px'}} />
-                <col style={{width: '24%'}} />
-                <col style={{width: '12%'}} />
+                <col style={{width: '90px'}} />
+                <col style={{width: '26%'}} />
+                <col style={{width: '110px'}} />
                 <col style={{width: '150px'}} />
                 <col style={{width: '140px'}} />
               </colgroup>
@@ -469,9 +469,9 @@ export default function Home() {
                     />
                   </th>
                   <th className="p-3 text-left font-medium" style={{width: '150px', minWidth: '150px', maxWidth: '150px'}}>URL / Domain</th>
-                  <th className="p-3 text-left font-medium" style={{width: '150px', minWidth: '150px', maxWidth: '150px'}}>Status</th>
+                  <th className="p-3 text-left font-medium" style={{width: '90px', minWidth: '90px', maxWidth: '90px'}}>Status</th>
                   <th className="p-3 text-left font-medium">Firma / Quelle</th>
-                  <th className="p-3 text-left font-medium">Kontakt</th>
+                  <th className="p-3 text-left font-medium" style={{width: '110px', minWidth: '110px', maxWidth: '110px'}}>Kontakt</th>
                   <th className="p-3 text-left font-medium" style={{width: '150px', minWidth: '150px', maxWidth: '150px'}}>Impressum</th>
                   <th className="p-3"></th>
                 </tr>
@@ -495,10 +495,10 @@ export default function Home() {
                       </a>
                       <span className="text-xs text-zinc-400 block truncate w-full max-w-[150px]" title={r.domain || ""}>{r.domain}</span>
                     </td>
-                    <td className="p-3 overflow-visible" style={{width: '150px', minWidth: '150px', maxWidth: '150px'}}>
-                      <div className="flex items-center gap-1.5">
+                    <td className="p-3 overflow-visible" style={{width: '90px', minWidth: '90px', maxWidth: '90px'}}>
+                      <div className="flex items-center gap-1">
                         <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium truncate max-w-[110px] ${
+                          className={`inline-flex rounded-full px-2 py-1 text-xs font-medium truncate max-w-[70px] ${
                             r.status === "done"
                               ? "bg-green-100 text-green-700"
                               : r.status === "error"
@@ -576,9 +576,9 @@ export default function Home() {
                       )}
                       <span className="text-xs text-zinc-500 block w-full truncate mt-1" title={r.address ? `${r.zip || ""} ${r.city || ""}` : ""}>{r.address ? `${r.zip || ""} ${r.city || ""}` : ""}</span>
                     </td>
-                    <td className="p-3 text-xs overflow-hidden min-w-0">
-                      <div className="truncate w-full" title={r.email || ""}>{r.email || "—"}</div>
-                      <div className="text-zinc-500 truncate w-full" title={r.phone || ""}>{r.phone || ""}</div>
+                    <td className="p-3 text-xs overflow-hidden min-w-0" style={{width: '110px', minWidth: '110px', maxWidth: '110px'}}>
+                      <div className="truncate w-full max-w-[110px]" title={r.email || ""}>{r.email || "—"}</div>
+                      <div className="text-zinc-500 truncate w-full max-w-[110px]" title={r.phone || ""}>{r.phone || ""}</div>
                     </td>
                     <td className="p-3 overflow-hidden min-w-0" style={{width: '150px', maxWidth: '150px'}}>
                       {r.impressum_url ? (
