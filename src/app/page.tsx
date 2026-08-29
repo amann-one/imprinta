@@ -437,14 +437,14 @@ export default function Home() {
         {/* Table */}
         <div className="rounded-2xl border bg-white overflow-hidden flex flex-col min-w-0 max-w-full">
           <div className="overflow-x-auto w-full max-w-full overscroll-x-contain">
-            <table className="w-full text-sm min-w-[820px]">
+            <table className="w-full text-sm min-w-[900px]">
               <colgroup>
                 <col style={{width: '36px'}} />
-                <col style={{width: '22%'}} />
                 <col style={{width: '150px'}} />
-                <col style={{width: '23%'}} />
+                <col style={{width: '150px'}} />
+                <col style={{width: '24%'}} />
                 <col style={{width: '12%'}} />
-                <col style={{width: '15%'}} />
+                <col style={{width: '150px'}} />
                 <col style={{width: '140px'}} />
               </colgroup>
               <thead className="bg-zinc-50 text-zinc-500">
@@ -468,11 +468,11 @@ export default function Home() {
                       title={allSelected ? "Seite abwählen" : "Seite auswählen"}
                     />
                   </th>
-                  <th className="p-3 text-left font-medium">URL / Domain</th>
+                  <th className="p-3 text-left font-medium" style={{width: '150px', minWidth: '150px', maxWidth: '150px'}}>URL / Domain</th>
                   <th className="p-3 text-left font-medium" style={{width: '150px', minWidth: '150px', maxWidth: '150px'}}>Status</th>
                   <th className="p-3 text-left font-medium">Firma / Quelle</th>
                   <th className="p-3 text-left font-medium">Kontakt</th>
-                  <th className="p-3 text-left font-medium">Impressum</th>
+                  <th className="p-3 text-left font-medium" style={{width: '150px', minWidth: '150px', maxWidth: '150px'}}>Impressum</th>
                   <th className="p-3"></th>
                 </tr>
               </thead>
@@ -489,11 +489,11 @@ export default function Home() {
                     <td className="p-3 overflow-hidden">
                       <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
                     </td>
-                    <td className="p-3 overflow-hidden min-w-0">
-                      <a href={r.url} target="_blank" className="font-medium hover:underline block w-full truncate" title={r.url}>
+                    <td className="p-3 overflow-hidden min-w-0" style={{width: '150px', maxWidth: '150px'}}>
+                      <a href={r.url} target="_blank" className="font-medium hover:underline block w-full truncate max-w-[150px]" title={r.url}>
                         {r.url}
                       </a>
-                      <span className="text-xs text-zinc-400 block truncate w-full" title={r.domain || ""}>{r.domain}</span>
+                      <span className="text-xs text-zinc-400 block truncate w-full max-w-[150px]" title={r.domain || ""}>{r.domain}</span>
                     </td>
                     <td className="p-3 overflow-visible" style={{width: '150px', minWidth: '150px', maxWidth: '150px'}}>
                       <div className="flex items-center gap-1.5">
@@ -580,15 +580,15 @@ export default function Home() {
                       <div className="truncate w-full" title={r.email || ""}>{r.email || "—"}</div>
                       <div className="text-zinc-500 truncate w-full" title={r.phone || ""}>{r.phone || ""}</div>
                     </td>
-                    <td className="p-3 overflow-hidden min-w-0">
+                    <td className="p-3 overflow-hidden min-w-0" style={{width: '150px', maxWidth: '150px'}}>
                       {r.impressum_url ? (
-                        <a href={r.impressum_url} target="_blank" className="text-xs text-blue-600 hover:underline block w-full truncate" title={r.impressum_url}>
+                        <a href={r.impressum_url} target="_blank" className="text-xs text-blue-600 hover:underline block w-full truncate max-w-[150px]" title={r.impressum_url}>
                           {r.impressum_url}
                         </a>
                       ) : (
                         <span className="text-xs text-zinc-400">—</span>
                       )}
-                      {r.ust_id && <div className="text-xs text-zinc-500 w-full truncate" title={r.ust_id}>{r.ust_id}</div>}
+                      {r.ust_id && <div className="text-xs text-zinc-500 w-full truncate max-w-[150px]" title={r.ust_id}>{r.ust_id}</div>}
                     </td>
                     <td className="p-3 overflow-hidden">
                       <div className="flex gap-1 flex-nowrap min-w-0">
