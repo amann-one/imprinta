@@ -434,6 +434,31 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Export */}
+        <div className="flex flex-wrap gap-3 items-center justify-between rounded-2xl border bg-white px-4 py-3">
+          <div className="text-sm">
+            <span className="font-medium">{rows.filter((r) => r.status === "done").length}</span>
+            <span className="text-zinc-500"> erledigte Einträge bereit zum Export</span>
+            <span className="text-xs text-zinc-400 ml-2">· sauber als CSV (Semikolon, BOM) oder XLSX</span>
+          </div>
+          <div className="flex gap-2">
+            <a
+              href="/api/export?format=csv&status=done"
+              download
+              className="rounded-full border bg-white px-4 py-2 text-sm hover:bg-zinc-50"
+            >
+              CSV Export
+            </a>
+            <a
+              href="/api/export?format=xlsx&status=done"
+              download
+              className="rounded-full bg-zinc-900 text-white px-4 py-2 text-sm hover:bg-zinc-800"
+            >
+              XLSX Export
+            </a>
+          </div>
+        </div>
+
         {/* Table */}
         <div className="rounded-2xl border bg-white overflow-hidden flex flex-col min-w-0 max-w-full">
           <div className="overflow-x-auto w-full max-w-full overscroll-x-contain">
