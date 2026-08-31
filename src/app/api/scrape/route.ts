@@ -9,19 +9,19 @@ export async function POST(req: Request) {
   const ids: number[] | undefined = body.ids;
   const limit = body.limit ? Math.min(Number(body.limit), 50) : 20;
 
-  // select pending or explicitly requested
+  // select pending or explicitly requested (inkl. manuell gepflegter Impressum-URL)
   let rows: any[];
   if (ids && Array.isArray(ids) && ids.length > 0) {
     const placeholders = ids.map(() => "?").join(",");
     const res = await client.execute({
-      sql: `SELECT id, url FROM sites WHERE id IN (${placeholders})`,
+      sql: `SELECT s.id, s.url, i.impressum_url as preferred_impressum_url FROM sites s LEFT JOIN impressum i ON i.site_id = s.id WHERE s.id IN (${placeholders})`,
       args: ids.map(String),
     });
     rows = res.rows as any[];
   } else {
     // pending first, then error, then oldest done re-scrape?
     const res = await client.execute({
-      sql: `SELECT id, url FROM sites WHERE status IN ('pending','error') ORDER BY created_at ASC LIMIT ?`,
+      sql: `SELECT s.id, s.url, i.impressum_url as preferred_impressum_url FROM sites s LEFT JOIN impressum i ON i.site_id = s.id WHERE s.status IN ('pending','error') ORDER BY s.created_at ASC LIMIT ?`,
       args: [String(limit)],
     });
     rows = res.rows as any[];
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       // optionally allow re-scrape of done if ?force
       if (body.force) {
         const res2 = await client.execute({
-          sql: `SELECT id, url FROM sites ORDER BY updated_at ASC LIMIT ?`,
+          sql: `SELECT s.id, s.url, i.impressum_url as preferred_impressum_url FROM sites s LEFT JOIN impressum i ON i.site_id = s.id ORDER BY s.updated_at ASC LIMIT ?`,
           args: [String(limit)],
         });
         rows = res2.rows as any[];
@@ -46,6 +46,7 @@ export async function POST(req: Request) {
   for (const row of rows) {
     const id = row.id as number;
     const url = row.url as string;
+    const preferredImpressumUrl = (row as any).preferred_impressum_url as string | null;
     const now = new Date().toISOString();
 
     await client.execute({
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
     });
 
     try {
-      const parsed = await findAndParseImpressum(url);
+      const parsed = await findAndParseImpressum(url, preferredImpressumUrl);
 
       // upsert impressum
       const existing = await client.execute({

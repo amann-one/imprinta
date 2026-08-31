@@ -914,6 +914,7 @@ export default function Home() {
                 <label className="col-span-2">
                   <span className="text-xs text-zinc-500">Impressum-URL</span>
                   <input value={editForm.impressum_url || ""} onChange={(e) => setEditForm((p) => ({ ...p, impressum_url: e.target.value }))} placeholder="https://..." className="mt-1 w-full rounded-full border px-3 py-2 text-sm" />
+                  <span className="text-[11px] text-zinc-400">Wenn gefüllt, wird beim Scrapen zuerst diese URL versucht (vor Homepage-Suche).</span>
                 </label>
                 <label>
                   <span className="text-xs text-zinc-500">Firma</span>

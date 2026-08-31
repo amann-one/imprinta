@@ -262,9 +262,63 @@ function parseStructuredFields(text: string): Partial<ParsedImpressum> {
   return result;
 }
 
+async function tryDirectImpressumUrl(cand: string): Promise<ParsedImpressum | null> {
+  const res = await fetchHtml(cand);
+  if (!res) return null;
+  const { text, html } = extractMainText(res.html);
+  if (!text || text.length < 80) return null;
+  const lower = text.toLowerCase();
+  const hasImpressumSignal =
+    lower.includes("impressum") ||
+    lower.includes("haftung") ||
+    lower.includes("handelsregister") ||
+    lower.includes("umsatzsteuer") ||
+    lower.includes("vertreten durch") ||
+    lower.includes("geschäftsführer");
+  const urlHasSignal = IMPRESSUM_HREF.test(cand.toLowerCase());
+  if (!hasImpressumSignal && !urlHasSignal && text.length < 300) return null;
+  const structured = parseStructuredFields(text);
+  // Mindestens ein strukturiertes Feld oder Impressum-Signal sollte vorhanden sein
+  if (!hasImpressumSignal && !structured.email && !structured.companyName && text.length < 200) return null;
+  return {
+    impressumUrl: cand,
+    rawText: text.slice(0, 20000),
+    rawHtml: html,
+    companyName: structured.companyName || null,
+    legalForm: structured.legalForm || null,
+    address: structured.address || null,
+    zip: structured.zip || null,
+    city: structured.city || null,
+    country: structured.country || null,
+    managingDirectors: structured.managingDirectors || null,
+    registerCourt: structured.registerCourt || null,
+    registerNumber: structured.registerNumber || null,
+    ustId: structured.ustId || null,
+    email: structured.email || null,
+    phone: structured.phone || null,
+    fax: structured.fax || null,
+    error: null,
+  };
+}
+
 export async function findAndParseImpressum(
-  siteUrl: string
+  siteUrl: string,
+  preferredImpressumUrl?: string | null
 ): Promise<ParsedImpressum> {
+  // 1) Falls Impressum-URL manuell gepflegt ist, zuerst direkt dort versuchen
+  if (preferredImpressumUrl && preferredImpressumUrl.trim()) {
+    const cand = normalizeUrl(preferredImpressumUrl.trim());
+    // kurze Validierung
+    try {
+      new URL(cand);
+      const direct = await tryDirectImpressumUrl(cand);
+      if (direct) return direct;
+      // Falls direkter Versuch kein valides Impressum liefert, fall through zur normalen Suche
+    } catch {
+      // ungültige URL -> ignoriere und mache normal weiter
+    }
+  }
+
   const normalized = normalizeUrl(siteUrl);
   const baseOrigin = (() => {
     try {
@@ -316,44 +370,8 @@ export async function findAndParseImpressum(
   }
 
   for (const cand of candidates) {
-    const res = await fetchHtml(cand);
-    if (!res) continue;
-    const { text, html } = extractMainText(res.html);
-    if (!text || text.length < 100) continue;
-    // prüfe ob wirklich Impressum (enthält typische Begriffe)
-    const lower = text.toLowerCase();
-    const hasImpressumSignal =
-      lower.includes("impressum") ||
-      lower.includes("haftung") ||
-      lower.includes("handelsregister") ||
-      lower.includes("umsatzsteuer") ||
-      lower.includes("vertreten durch") ||
-      lower.includes("geschäftsführer");
-
-    // auch wenn kein Signal, aber Text lang genug, akzeptieren falls URL impressum enthält
-    const urlHasSignal = IMPRESSUM_HREF.test(cand.toLowerCase());
-    if (!hasImpressumSignal && !urlHasSignal && text.length < 300) continue;
-
-    const structured = parseStructuredFields(text);
-    return {
-      impressumUrl: cand,
-      rawText: text.slice(0, 20000),
-      rawHtml: html,
-      companyName: structured.companyName || null,
-      legalForm: structured.legalForm || null,
-      address: structured.address || null,
-      zip: structured.zip || null,
-      city: structured.city || null,
-      country: structured.country || null,
-      managingDirectors: structured.managingDirectors || null,
-      registerCourt: structured.registerCourt || null,
-      registerNumber: structured.registerNumber || null,
-      ustId: structured.ustId || null,
-      email: structured.email || null,
-      phone: structured.phone || null,
-      fax: structured.fax || null,
-      error: null,
-    };
+    const direct = await tryDirectImpressumUrl(cand);
+    if (direct) return direct;
   }
 
   return {
