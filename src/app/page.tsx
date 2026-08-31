@@ -25,6 +25,9 @@ type Row = {
   register_number: string | null;
   register_court: string | null;
   managing_directors: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  impressum_fetched_at: string | null;
 };
 
 export default function Home() {
@@ -46,6 +49,8 @@ export default function Home() {
   const [isEditingDetail, setIsEditingDetail] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Row>>({});
   const [savingDetail, setSavingDetail] = useState(false);
+  const [sortField, setSortField] = useState<"company_name" | "status" | "updated_at" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const fetchRows = useCallback(async () => {
     setLoading(true);
@@ -253,6 +258,25 @@ export default function Home() {
     setSavingDetail(false);
   };
 
+  const toggleSort = (field: "company_name" | "status" | "updated_at") => {
+    if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+    setPage(1);
+  };
+  const formatDate = (iso: string | null) => {
+    if (!iso) return "—";
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString("de-DE") + " " + d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return iso;
+    }
+  };
+  const sortIndicator = (f: string) => (sortField === f ? (sortDir === "asc" ? "↑" : "↓") : "↕");
+
   const filtered = rows.filter((r) => {
     if (!filter) return true;
     const f = filter.toLowerCase();
@@ -265,11 +289,24 @@ export default function Home() {
     );
   });
 
+  const sorted = [...filtered].sort((a, b) => {
+    if (!sortField) return 0;
+    if (sortField === "updated_at") {
+      const av = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const bv = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return sortDir === "asc" ? av - bv : bv - av;
+    }
+    const av = (a[sortField] as string) || "";
+    const bv = (b[sortField] as string) || "";
+    const cmp = av.localeCompare(bv, "de", { sensitivity: "base" });
+    return sortDir === "asc" ? cmp : -cmp;
+  });
+
   // pagination
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const startIdx = (safePage - 1) * pageSize;
-  const paginated = filtered.slice(startIdx, startIdx + pageSize);
+  const paginated = sorted.slice(startIdx, startIdx + pageSize);
 
   // reset page on filter / pageSize change
   useEffect(() => {
@@ -462,14 +499,15 @@ export default function Home() {
         {/* Table */}
         <div className="rounded-2xl border bg-white overflow-hidden flex flex-col min-w-0 max-w-full">
           <div className="overflow-x-auto w-full max-w-full overscroll-x-contain">
-            <table className="w-full text-sm min-w-[820px]">
+            <table className="w-full text-sm min-w-[960px]">
               <colgroup>
                 <col style={{width: '36px'}} />
                 <col style={{width: '150px'}} />
                 <col style={{width: '90px'}} />
-                <col style={{width: '26%'}} />
+                <col style={{width: '20%'}} />
                 <col style={{width: '110px'}} />
                 <col style={{width: '150px'}} />
+                <col style={{width: '130px'}} />
                 <col style={{width: '140px'}} />
               </colgroup>
               <thead className="bg-zinc-50 text-zinc-500">
@@ -494,17 +532,18 @@ export default function Home() {
                     />
                   </th>
                   <th className="p-3 text-left font-medium" style={{width: '150px', minWidth: '150px', maxWidth: '150px'}}>URL / Domain</th>
-                  <th className="p-3 text-left font-medium" style={{width: '90px', minWidth: '90px', maxWidth: '90px'}}>Status</th>
-                  <th className="p-3 text-left font-medium">Firma / Quelle</th>
+                  <th className="p-3 text-left font-medium cursor-pointer select-none hover:text-zinc-700" style={{width: '90px', minWidth: '90px', maxWidth: '90px'}} onClick={() => toggleSort("status")} title="Nach Status sortieren">Status <span className="text-xs">{sortIndicator("status")}</span></th>
+                  <th className="p-3 text-left font-medium cursor-pointer select-none hover:text-zinc-700" onClick={() => toggleSort("company_name")} title="Nach Firma sortieren">Firma / Quelle <span className="text-xs">{sortIndicator("company_name")}</span></th>
                   <th className="p-3 text-left font-medium" style={{width: '110px', minWidth: '110px', maxWidth: '110px'}}>Kontakt</th>
                   <th className="p-3 text-left font-medium" style={{width: '150px', minWidth: '150px', maxWidth: '150px'}}>Impressum</th>
+                  <th className="p-3 text-left font-medium cursor-pointer select-none hover:text-zinc-700" style={{width: '130px', minWidth: '130px', maxWidth: '130px'}} onClick={() => toggleSort("updated_at")} title="Nach Aktualisierung sortieren">Aktualisiert <span className="text-xs">{sortIndicator("updated_at")}</span></th>
                   <th className="p-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {filtered.length === 0 && (
+                {sorted.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-zinc-400">
+                    <td colSpan={8} className="p-8 text-center text-zinc-400">
                       Keine URLs vorhanden. Importiere eine CSV oder ein Google Sheet.
                     </td>
                   </tr>
@@ -615,6 +654,9 @@ export default function Home() {
                       )}
                       {r.ust_id && <div className="text-xs text-zinc-500 w-full truncate max-w-[150px]" title={r.ust_id}>{r.ust_id}</div>}
                     </td>
+                    <td className="p-3 overflow-hidden min-w-0" style={{width: '130px', minWidth: '130px', maxWidth: '130px'}}>
+                      <span className="block w-full truncate text-xs" title={r.updated_at || ""}>{formatDate(r.updated_at)}</span>
+                    </td>
                     <td className="p-3 overflow-hidden">
                       <div className="flex gap-1 flex-nowrap min-w-0">
                       <button onClick={() => setDetail(r)} className="rounded-full border px-2.5 py-1 text-xs hover:bg-zinc-50" title="Details ansehen/bearbeiten">
@@ -643,23 +685,23 @@ export default function Home() {
           </div>
           <div className="border-t bg-zinc-50 px-4 py-2 text-xs text-zinc-500 flex flex-wrap gap-2 items-center justify-between">
             <span>
-              {filtered.length} / {rows.length} URLs · {rows.filter((r) => r.status === "done").length} done ·{" "}
+              {sorted.length} / {rows.length} URLs · {rows.filter((r) => r.status === "done").length} done ·{" "}
               {rows.filter((r) => r.status === "pending").length} pending · {rows.filter((r) => r.status === "error").length} error
-              {filtered.length > 0 && (
+              {sorted.length > 0 && (
                 <span className="ml-2">
-                  · Zeige {startIdx + 1}–{Math.min(startIdx + pageSize, filtered.length)} von {filtered.length}
+                  · Zeige {startIdx + 1}–{Math.min(startIdx + pageSize, sorted.length)} von {sorted.length}
                 </span>
               )}
             </span>
-            {filtered.length > 0 && (
+            {sorted.length > 0 && (
               <span className="text-zinc-400">
                 {selected.size > 0 && `${selected.size} ausgewählt`}
-                {selected.size > 0 && filtered.length !== selected.size && (
+                {selected.size > 0 && sorted.length !== selected.size && (
                   <button
-                    onClick={() => setSelected(new Set(filtered.map((r) => r.id)))}
+                    onClick={() => setSelected(new Set(sorted.map((r) => r.id)))}
                     className="ml-2 underline hover:text-zinc-600"
                   >
-                    alle {filtered.length} wählen
+                    alle {sorted.length} wählen
                   </button>
                 )}
               </span>
